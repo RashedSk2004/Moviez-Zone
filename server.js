@@ -46,7 +46,13 @@ const cloudReady=()=>!!(process.env.CLOUDINARY_CLOUD_NAME&&process.env.CLOUDINAR
 const safeUnlink=f=>f&&fs.promises.unlink(f).catch(()=>{});
 async function uploadVideo(file,title,quality){
   const name=String(title).replace(/[^a-z0-9]+/gi,"-").replace(/^-|-$/g,"").toLowerCase()||"movie";
-  const r=await cloudinary.uploader.upload_large(file.path,{resource_type:"video",folder:"moviez-zone/videos",public_id:`${Date.now()}-${name}-${quality}`,overwrite:true,chunk_size:20*1024*1024});
+  return {
+  url: r.secure_url || r.url || "",
+  publicId: r.public_id || "",
+  bytes: r.bytes || 0,
+  format: r.format || "",
+  duration: r.duration || 0
+};
   return {url:r.secure_url,publicId:r.public_id,bytes:r.bytes,format:r.format,duration:r.duration};
 }
 async function uploadPoster(file,title){
