@@ -79,7 +79,7 @@ window.playMovie=async id=>{
 
   const player=$("#player");
   $("#qualitySelect").value=entries[0][0];
-  player.src=entries[0][1].url;
+  player.src=typeof entries[0][1]==="string"?entries[0][1]:(entries[0][1]?.url||entries[0][1]?.src||"");
   player.load();
 
   $("#playerTitle").textContent=v.title;
@@ -90,7 +90,7 @@ window.playMovie=async id=>{
   $("#qualitySelect").onchange=()=>{
     const selected=v.qualities[$("#qualitySelect").value];
     if(selected?.url){
-      player.src=selected.url;
+      player.src=typeof selected==="string"?selected:(selected?.url||selected?.src||"");
       player.load();
       player.play().catch(()=>{});
     }
