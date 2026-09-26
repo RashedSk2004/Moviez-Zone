@@ -14,8 +14,50 @@ $("#logoutBtn").onclick=()=>{localStorage.removeItem("mz_token");token=null;loca
 async function refreshMe(){if(!token)return;try{const u=await api("/api/me");$("#loginBtn").hidden=true;$("#signupBtn").hidden=true;$("#logoutBtn").hidden=false;if(u.role==="admin"||u.role==="uploader"){$("#adminNav").hidden=false;$("#admin").hidden=false}if(u.role==="admin"){$("#permissionPanel").hidden=false;loadUsers()}}catch{localStorage.removeItem("mz_token");token=null}}
 async function loadUsers(){try{const us=await api("/api/users");$("#users").innerHTML=us.map(u=>`<div class="userRow"><span><b>${esc(u.name)}</b><br><small>${esc(u.email)} • ${u.role}</small></span><select onchange="changeRole(${u.id},this.value)"><option ${u.role==="user"?"selected":""}>user</option><option ${u.role==="uploader"?"selected":""}>uploader</option><option ${u.role==="admin"?"selected":""}>admin</option></select></div>`).join("")}catch{}}
 window.changeRole=async(id,role)=>{try{await api("/api/users/"+id+"/role",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({role})});toast("Permission updated");loadUsers()}catch(e){toast(e.message)}};
-$("#uploadForm").onsubmit=async e=>{e.preventDefault();try{const r=await fetch("/api/videos",{method:"POST",headers:{Authorization:"Bearer "+token},body:new FormData(e.target)});const d=await r.json();if(!r.ok)throw Error(d.error);toast("Movie uploaded");e.target.reset();load()}catch(err){toast(err.message)}};
 function esc(s){return String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+$("#uploadForm").submit(e=>{
+  e.preventDefault();
+
+  const form = e.target;
+  const status = document.createElement("div");
+  status.id = "uploadProgress";
+  status.style.cssText = "margin-top:12px;font-size:16px;font-weight:bold;text-align:center;";
+  form.appendChild(status);
+
+  const xhr = new XMLHttpRequest();
+  xhr.open("POST", "/api/videos");
+
+  xhr.setRequestHeader("Authorization", "Bearer " + token);
+
+  xhr.upload.onprogress = e => {
+    if (e.lengthComputable) {
+      const done = (e.loaded / 1024 / 1024 / 1024).toFixed(2);
+      const total = (e.total / 1024 / 1024 / 1024).toFixed(2);
+      const percent = Math.round((e.loaded / e.total) * 100);
+
+      status.textContent = `Uploading… ${done} GB / ${total} GB (${percent}%)`;
+    }
+  };
+
+  xhr.onload = () => {
+    if (xhr.status >= 200 && xhr.status < 300) {
+      status.textContent = "Upload complete ✅";
+      toast("Video uploaded successfully");
+      form.reset();
+      load();
+    } else {
+      status.textContent = "Upload failed ❌";
+      toast("Upload failed");
+    }
+  };
+
+  xhr.onerror = () => {
+    status.textContent = "Upload failed ❌";
+    toast("Upload failed");
+  };
+
+  xhr.send(new FormData(form));
+});
 function poster(v){return v.poster?`<img src="${v.poster}" alt="">`:"🎬"}
 function topCard(v,i){return `<button class="topCard" onclick="playMovie(${v.id})"><span class="rank">${i+1}</span><div class="poster">${poster(v)}</div><b>${esc(v.title)}</b><small>◉ ${(v.views||0).toLocaleString()} views</small></button>`}
 function movieCard(v){return `<button class="movieCard" onclick="playMovie(${v.id})"><div class="poster">${poster(v)}</div><div class="movieInfo"><b>${esc(v.title)}</b><small>${esc(v.year)} • ${esc(v.genre)}</small></div></button>`}
