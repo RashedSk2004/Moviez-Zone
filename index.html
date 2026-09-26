@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#020711">
+<title>Moviez Zone</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="header">
+  <button class="iconBtn mobileOnly" id="menuBtn">☰</button>
+  <a class="brand" href="#home"><span class="brandMark">MZ</span><span>MOVIEZ <b>ZONE</b></span></a>
+  <nav id="nav">
+    <a href="#home">Home</a><a href="#movies">Movies</a><a href="#top">Top 10</a><a href="#trending">Trending</a><a href="#admin" id="adminNav" hidden>Admin</a>
+  </nav>
+  <button class="iconBtn" id="searchBtn">⌕</button>
+  <button class="outlineBtn" id="loginBtn">Sign In</button>
+  <button class="goldBtn" id="signupBtn">Sign Up</button>
+  <button class="outlineBtn" id="logoutBtn" hidden>Logout</button>
+</header>
+
+<main>
+<section id="home" class="hero">
+  <div class="heroGlow"></div>
+  <div class="heroCopy">
+    <span class="badge">★ FEATURED MOVIE DESTINATION</span>
+    <div class="welcome">WELCOME TO</div>
+    <h1>MOVIEZ <em>ZONE</em></h1>
+    <div class="tagline">WATCH • STREAM • ENJOY</div>
+    <p>Discover blockbuster entertainment, trending titles and unforgettable stories — all in one cinematic zone.</p>
+    <div class="heroSearch">
+      <input id="searchInput" placeholder="Search movies, series, actors..." autocomplete="off">
+      <button id="doSearch">➜</button>
+    </div>
+    <div class="featurePills">
+      <span>▣ High Quality</span><span>ϟ Fast Streaming</span><span>◇ Secure & Safe</span><span>♛ Premium Content</span>
+    </div>
+  </div>
+</section>
+
+<section id="top" class="section">
+  <div class="sectionHead"><div><h2>♛ Top 10 <span>Most Viewed</span></h2><p>The movies everyone is watching!</p></div><a href="#movies">View All ›</a></div>
+  <div id="topRow" class="horizontal"></div>
+</section>
+
+<div class="genreBar">
+  <button class="active">All</button><button>Action</button><button>Adventure</button><button>Comedy</button><button>Drama</button><button>Horror</button><button>Sci-Fi</button><button>Thriller</button><button>Romance</button>
+</div>
+
+<section id="trending" class="section">
+  <div class="sectionHead"><div><h2>🔥 Trending <span>Now</span></h2></div><a href="#movies">View All ›</a></div>
+  <div id="trendRow" class="horizontal"></div>
+</section>
+
+<section id="movies" class="section">
+  <div class="sectionHead"><div><h2>🎬 All <span>Movies</span></h2></div></div>
+  <div id="movieGrid" class="movieGrid"></div>
+</section>
+
+<section id="admin" class="section" hidden>
+  <div class="sectionHead"><div><h2>♛ Admin <span>Control</span></h2><p>Only Admin and Admin-approved Uploaders can upload.</p></div></div>
+  <div class="adminGrid">
+    <form id="uploadForm" class="panel">
+      <h3>Upload Movie</h3>
+      <input name="title" placeholder="Movie title" required>
+      <div class="two"><input name="year" placeholder="Year"><input name="genre" placeholder="Genre"></div>
+      <input name="tag" placeholder="Badge e.g. NEW / 4K / HD">
+      <textarea name="description" placeholder="Description"></textarea>
+      <label>480p <input name="video480" type="file" accept="video/*"></label>
+      <label>720p <input name="video720" type="file" accept="video/*"></label>
+      <label>1080p <input name="video1080" type="file" accept="video/*"></label>
+      <label>4K <input name="video4k" type="file" accept="video/*"></label>
+      <label>Poster <input name="poster" type="file" accept="image/*"></label>
+      <button class="goldBtn wide">⬆ Upload Video</button>
+    </form>
+    <div class="panel" id="permissionPanel" hidden><h3>User Permissions</h3><p class="muted">Admin can give or remove Uploader access.</p><div id="users"></div></div>
+  </div>
+</section>
+</main>
+
+<footer>🎬 Moviez Zone © 2026 • Upload only content you are authorized to distribute.</footer>
+
+<div id="authModal" class="modal" hidden><div class="modalBox"><button class="close" onclick="closeAuth()">×</button><h2 id="authTitle">Sign In</h2><form id="authForm"><input name="name" placeholder="Full name" hidden><input name="email" type="email" placeholder="Email" required><input name="password" type="password" placeholder="Password" required><button class="goldBtn wide">Continue</button></form><button id="switchAuth" class="linkBtn">Create account</button></div></div>
+
+<div id="playerModal" class="modal" hidden><div class="playerBox"><button class="close" onclick="closePlayer()">×</button><video id="player" controls playsinline></video><div class="playerInfo"><div><h2 id="playerTitle"></h2><p id="playerMeta" class="muted"></p></div><div class="playerControls"><label>Quality <select id="qualitySelect"></select></label><button id="downloadBtn" class="goldBtn">⬇ Download</button></div></div></div></div>
+
+<div id="toast"></div>
+<script src="/app.js"></script>
+</body>
+</html>
