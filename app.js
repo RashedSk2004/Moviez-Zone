@@ -15,7 +15,7 @@ async function refreshMe(){if(!token)return;try{const u=await api("/api/me");$("
 async function loadUsers(){try{const us=await api("/api/users");$("#users").innerHTML=us.map(u=>`<div class="userRow"><span><b>${esc(u.name)}</b><br><small>${esc(u.email)} • ${u.role}</small></span><select onchange="changeRole(${u.id},this.value)"><option ${u.role==="user"?"selected":""}>user</option><option ${u.role==="uploader"?"selected":""}>uploader</option><option ${u.role==="admin"?"selected":""}>admin</option></select></div>`).join("")}catch{}}
 window.changeRole=async(id,role)=>{try{await api("/api/users/"+id+"/role",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({role})});toast("Permission updated");loadUsers()}catch(e){toast(e.message)}};
 function esc(s){return String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-$("#uploadForm").submit(e=>{
+$("#uploadForm").addEventListener("submit", e=>{
   e.preventDefault();
 
   const form = e.target;
