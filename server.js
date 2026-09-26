@@ -5,6 +5,7 @@ import fs from "fs";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import multer from "multer";
+import { v2 as cloudinary } from "cloudinary";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -12,7 +13,7 @@ const PORT = process.env.PORT || 3000;
 const SECRET = process.env.JWT_SECRET || "CHANGE_THIS_IN_PRODUCTION";
 
 const dataDir = path.join(__dirname, "data");
-const uploadDir = path.join(__dirname, "uploads");
+const uploadDir = path.join(__dirname, "uploads-tmp");
 fs.mkdirSync(dataDir, {recursive:true});
 fs.mkdirSync(uploadDir, {recursive:true});
 const dbFile = path.join(dataDir, "db.json");
@@ -35,10 +36,30 @@ const storage=multer.diskStorage({
 });
 const upload=multer({storage,limits:{fileSize:8*1024*1024*1024}});
 
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  secure: true
+});
+const cloudReady=()=>!!(process.env.CLOUDINARY_CLOUD_NAME&&process.env.CLOUDINARY_API_KEY&&process.env.CLOUDINARY_API_SECRET);
+const safeUnlink=f=>f&&fs.promises.unlink(f).catch(()=>{});
+async function uploadVideo(file,title,quality){
+  const name=String(title).replace(/[^a-z0-9]+/gi,"-").replace(/^-|-$/g,"").toLowerCase()||"movie";
+  const r=await cloudinary.uploader.upload_large(file.path,{resource_type:"video",folder:"moviez-zone/videos",public_id:`${Date.now()}-${name}-${quality}`,overwrite:true,chunk_size:20*1024*1024});
+  return {url:r.secure_url,publicId:r.public_id,bytes:r.bytes,format:r.format,duration:r.duration};
+}
+async function uploadPoster(file,title){
+  if(!file)return "";
+  const name=String(title).replace(/[^a-z0-9]+/gi,"-").replace(/^-|-$/g,"").toLowerCase()||"movie";
+  const r=await cloudinary.uploader.upload(file.path,{resource_type:"image",folder:"moviez-zone/posters",public_id:`${Date.now()}-${name}`,overwrite:true});
+  return r.secure_url;
+}
+
 app.use(express.json());
 app.use(express.urlencoded({extended:true}));
 app.use(express.static(__dirname));
-app.use("/uploads", express.static(uploadDir));
+
 
 function auth(req,res,next){
   try {
@@ -99,33 +120,24 @@ app.patch("/api/users/:id/role",auth,roles("admin"),(req,res)=>{
 });
 
 app.post("/api/videos",auth,roles("admin","uploader"),
-  upload.fields([
-    {name:"video480",maxCount:1},
-    {name:"video720",maxCount:1},
-    {name:"video1080",maxCount:1},
-    {name:"video4k",maxCount:1},
-    {name:"poster",maxCount:1}
-  ]),
-  (req,res)=>{
-    const files=req.files||{};
-    const qualities={};
-    for(const key of ["video480","video720","video1080","video4k"]){
-      if(files[key]?.[0]) qualities[key.replace("video","")]={
-        url:"/uploads/"+files[key][0].filename,
-        size:files[key][0].size
-      };
+  upload.fields([{name:"video480",maxCount:1},{name:"video720",maxCount:1},{name:"video1080",maxCount:1},{name:"video4k",maxCount:1},{name:"poster",maxCount:1}]),
+  async (req,res)=>{
+    if(!cloudReady()) return res.status(500).json({error:"Cloudinary environment variables are not configured"});
+    const files=req.files||{}, qualities={};
+    try{
+      for(const key of ["video480","video720","video1080","video4k"]){
+        if(files[key]?.[0]){ const q=key.replace("video",""); qualities[q]=await uploadVideo(files[key][0],req.body.title||"movie",q); safeUnlink(files[key][0].path); }
+      }
+      const poster=files.poster?.[0] ? await uploadPoster(files.poster[0],req.body.title||"movie") : "";
+      if(files.poster?.[0]) safeUnlink(files.poster[0].path);
+      if(!Object.keys(qualities).length) return res.status(400).json({error:"Upload at least one video quality"});
+      const db=readDB();
+      const v={id:Date.now(),title:req.body.title||"Untitled",year:req.body.year||"",genre:req.body.genre||"Movie",description:req.body.description||"",tag:req.body.tag||"HD",poster,qualities,views:0,uploadedBy:req.user.name};
+      db.videos.push(v); writeDB(db); res.json(v);
+    }catch(e){
+      for(const k of ["video480","video720","video1080","video4k","poster"]) if(files[k]?.[0]) safeUnlink(files[k][0].path);
+      console.error(e); res.status(500).json({error:"Cloudinary upload failed. Check your Render environment variables and try again."});
     }
-    if(!Object.keys(qualities).length)
-      return res.status(400).json({error:"Upload at least one video quality"});
-    const poster=files.poster?.[0] ? "/uploads/"+files.poster[0].filename : "";
-    const db=readDB();
-    const v={
-      id:Date.now(), title:req.body.title||"Untitled",
-      year:req.body.year||"", genre:req.body.genre||"Movie",
-      description:req.body.description||"", tag:req.body.tag||"HD",
-      poster, qualities, views:0, uploadedBy:req.user.name
-    };
-    db.videos.push(v); writeDB(db); res.json(v);
   }
 );
 
@@ -135,6 +147,11 @@ app.delete("/api/videos/:id",auth,roles("admin","uploader"),(req,res)=>{
   const v=db.videos[i];
   if(req.user.role!=="admin" && v.uploadedBy!==req.user.name)
     return res.status(403).json({error:"You can only delete your own uploads"});
+  try {
+    for (const q of Object.values(v.qualities||{})) {
+      if (q.publicId) await cloudinary.uploader.destroy(q.publicId,{resource_type:"video"});
+    }
+  } catch(e) { console.error("Cloudinary cleanup:",e); }
   db.videos.splice(i,1); writeDB(db); res.json({ok:true});
 });
 
