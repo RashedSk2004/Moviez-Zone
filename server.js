@@ -141,7 +141,7 @@ app.post("/api/videos",auth,roles("admin","uploader"),
   }
 );
 
-app.delete("/api/videos/:id",auth,roles("admin","uploader"),(req,res)=>{
+app.delete("/api/videos/:id",auth,roles("admin","uploader"),async (req, res)=>{
   const db=readDB(), i=db.videos.findIndex(v=>v.id==req.params.id);
   if(i<0) return res.status(404).json({error:"Video not found"});
   const v=db.videos[i];
