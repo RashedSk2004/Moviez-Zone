@@ -106,7 +106,62 @@ app.post("/api/videos/:id/view",(req,res)=>{
   if(!v) return res.status(404).json({error:"Video not found"});
   v.views=(v.views||0)+1; writeDB(db); res.json({views:v.views});
 });
+app.post("/api/videos/:id/like",(req,res)=>{
+  const db=readDB();
+  const v=db.videos.find(x=>x.id==req.params.id);
 
+  if(!v) return res.status(404).json({error:"Video not found"});
+
+  v.likes=(v.likes||0)+1;
+  writeDB(db);
+
+  res.json({likes:v.likes});
+});
+
+app.get("/api/videos/:id/comments",(req,res)=>{
+  const db=readDB();
+  const v=db.videos.find(x=>x.id==req.params.id);
+
+  if(!v) return res.status(404).json({error:"Video not found"});
+
+  res.json(v.comments||[]);
+});
+
+app.post("/api/videos/:id/comments",auth,(req,res)=>{
+  const db=readDB();
+  const v=db.videos.find(x=>x.id==req.params.id);
+
+  if(!v) return res.status(404).json({error:"Video not found"});
+
+  const text=String(req.body.text||"").trim();
+
+  if(!text) return res.status(400).json({error:"Comment required"});
+
+  v.comments=v.comments||[];
+
+  v.comments.push({
+    id:Date.now(),
+    user:req.user.name,
+    text,
+    createdAt:new Date().toISOString()
+  });
+
+  writeDB(db);
+
+  res.json(v.comments[v.comments.length-1]);
+});
+
+app.get("/api/admin/stats",auth,roles("admin"),(req,res)=>{
+  const db=readDB();
+
+  res.json({
+    movies:db.videos.length,
+    users:db.users.length,
+    views:db.videos.reduce((sum,v)=>sum+(v.views||0),0),
+    likes:db.videos.reduce((sum,v)=>sum+(v.likes||0),0),
+    comments:db.videos.reduce((sum,v)=>sum+(v.comments?.length||0),0)
+  });
+});
 app.get("/api/users",auth,roles("admin"),(req,res)=>{
   res.json(readDB().users.map(({passwordHash,...u})=>u));
 });
