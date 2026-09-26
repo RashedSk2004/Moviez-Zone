@@ -68,6 +68,7 @@ window.playMovie=async id=>{
   if(!v) return;
 
   const entries=Object.entries(v.qualities||{});
+  toast("Q: "+JSON.stringify(v.qualities));
   if(!entries.length){
     toast("Video file not found");
     return;
