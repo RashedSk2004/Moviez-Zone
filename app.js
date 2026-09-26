@@ -49,7 +49,7 @@ $("#uploadForm").addEventListener("submit", e=>{
       status.textContent = "Upload failed ❌";
       toast("Upload failed");
     }
-  };
+  }
 
   xhr.onerror = () => {
     status.textContent = "Upload failed ❌";
@@ -63,7 +63,46 @@ function topCard(v,i){return `<button class="topCard" onclick="playMovie(${v.id}
 function movieCard(v){return `<button class="movieCard" onclick="playMovie(${v.id})"><div class="poster">${poster(v)}</div><div class="movieInfo"><b>${esc(v.title)}</b><small>${esc(v.year)} • ${esc(v.genre)}</small></div></button>`}
 function trendCard(v){return movieCard(v)}
 async function load(){try{const q=$("#searchInput").value.trim();videos=await api("/api/videos"+(q?"?q="+encodeURIComponent(q):""));$("#topRow").innerHTML=videos.slice(0,10).map(topCard).join("")||'<p class="muted">No movies found.</p>';$("#trendRow").innerHTML=videos.slice(0,6).map(trendCard).join("");$("#movieGrid").innerHTML=videos.map(movieCard).join("")||'<p class="muted">No movies found.</p>'}catch(e){toast(e.message)}}
-window.playMovie=async id=>{const v=videos.find(x=>x.id===id);if(!v)return;const entries=Object.entries(v.qualities||{});if(!entries.length)return;$("#qualitySelect").innerHTML=entries.map(([q,o])=>`<option value="${esc(o.url)}">${q}</option>`).join("");$("#player").src=entries[0][1].url;$("#playerTitle").textContent=v.title;$("#playerMeta").textContent=`${v.year} • ${v.genre} • ${v.tag||"HD"}`;$("#playerModal").hidden=false;$("#downloadBtn").onclick=()=>{const a=document.createElement("a");a.href=$("#qualitySelect").value;a.download=v.title+".mp4";a.click()};$("#qualitySelect").onchange=e=>{$("#player").src=e.target.value;$("#player").play().catch(()=>{})};try{const d=await api("/api/videos/"+id+"/view",{method:"POST"});v.views=d.views}catch{}};
+window.playMovie=async id=>{
+  const v=videos.find(x=>x.id==id);
+  if(!v) return;
+
+  const entries=Object.entries(v.qualities||{});
+  if(!entries.length){
+    toast("Video file not found");
+    return;
+  }
+
+  $("#qualitySelect").innerHTML=entries.map(([q,o])=>
+    `<option value="${q}">${q}p</option>`
+  ).join("");
+
+  const player=$("#player");
+  $("#qualitySelect").value=entries[0][0];
+  player.src=entries[0][1].url;
+  player.load();
+
+  $("#playerTitle").textContent=v.title;
+  $("#playerMeta").textContent=`${v.year||""} • ${v.genre||""} • ${v.tag||"HD"}`;
+
+  $("#playerModal").hidden=false;
+
+  $("#qualitySelect").onchange=()=>{
+    const selected=v.qualities[$("#qualitySelect").value];
+    if(selected?.url){
+      player.src=selected.url;
+      player.load();
+      player.play().catch(()=>{});
+    }
+  };
+
+  player.play().catch(()=>{});
+
+  try{
+    await api("/api/videos/"+id+"/view",{method:"POST"});
+    v.views=(v.views||0)+1;
+  }catch(e){}
+};
 window.closePlayer=()=>{$("#player").pause();$("#playerModal").hidden=true};
 document.querySelectorAll(".genreBar button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".genreBar button").forEach(x=>x.classList.remove("active"));b.classList.add("active");const g=b.textContent.trim();if(g==="All"){load();return}$("#searchInput").value=g;load()});
 load();refreshMe();
